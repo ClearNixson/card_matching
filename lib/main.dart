@@ -1,122 +1,216 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'dart:async';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => GameState(),
+      child: const CardMatchingGame(),
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class CardMatchingGame extends StatelessWidget {
+  const CardMatchingGame({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Card Matching Game',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const GameScreen(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
+class GameScreen extends StatelessWidget {
+  const GameScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    final gameState = Provider.of<GameState>(context);
+
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: const Text('Card Matching Game'),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Time: ${gameState.timeElapsed} seconds'),
+                Text('Score: ${gameState.score}'),
+              ],
             ),
-          ],
-        ),
+          ),
+          const Expanded(child: CardGrid()),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+        onPressed: () {
+          gameState.initializeCards();
+        },
+        child: const Icon(Icons.refresh),
+      ),
     );
+  }
+}
+
+class CardGrid extends StatelessWidget {
+  const CardGrid({super.key});
+
+  @override
+  Widget build (BuildContext context) {
+    final gameState = Provider.of<GameState>(context);
+
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+      ),
+      itemCount: gameState.cards.length,
+      itemBuilder: (context, index) {
+        return CardWidget(index: index);
+      },
+    );
+  }
+}
+
+class CardWidget extends StatelessWidget {
+  final int index;
+
+  const CardWidget({super.key, required this.index});
+
+  @override
+  Widget build (BuildContext context) {
+    final gameState  = Provider.of<GameState>(context);
+    final card = gameState.cards[index];
+
+    return GestureDetector(
+      onTap: () => gameState.flipCard[index],
+      child: AnimatedBuilder(
+        animation: Listenable.merge([gameState]),
+        builder: (context, child) {
+          return Transform(
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.001)
+              ..rotateY(card.isFaceUp ? 0 : 3.14),
+            alignment: Alignment.center,
+            child: Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: card.isFaceUp ? Colors.white : Colors.blue,
+                borderRadius: BorderRadius.circular(8),
+                image: card.isFaceUp
+                  ? DecorationImage(
+                    image: AssetImage(card.frontImage), fit: BoxFit.cover
+                  )
+                  : DecorationImage(
+                    image: AssetImage(card.backImage), fit: BoxFit.cover
+                  ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class CardModel {
+  final String frontImage;
+  final String backImage;
+  bool isFaceUp
+  bool isMatch;
+
+  CardModel ({
+    required this.frontImage,
+    required this.backImage,
+    this.isFaceUp = false,
+    this.isMatch = false,
+  });
+}
+
+class GameState extends ChangeNotifier {
+  List<CardModel> cards = [];
+  int score = 0;
+  int timeElapsed = 0;
+  bool isGameOver = false;
+  Timer? timer;
+
+  GameState() {
+    initializeCards();
+  }
+
+  void initializeCards() {
+    score = 0;
+    timeElapsed = 0;
+    isGameOver = false;
+    timer?.cancel();
+
+    List<String> images = [
+      //add assets
+    ];
+    cards = (images + images)
+      .map((image) => CardModel(
+        frontImage: image,
+        backImage: 'asset/back.png',
+      ))
+      .toList();
+    cards.shuffle();
+
+    timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (isGameOver) {
+        timer.cancel();
+      }
+      else {
+        timeElapsed++;
+        notifyListeners();
+      }
+    });
+
+    notifyListeners();
+  }
+
+  void flipCard(int index) {
+    if (cards[index].isMatch || cards[index].isFaceUp) return;
+
+    cards[index].isFaceUp = !cards[index].isFaceUp;
+    notifyListeners();
+
+    checkMatch();
+  }
+
+  void checkMatch() {
+    var faceUpCards = cards.where((card) => card.isFaceUp && !card.isMatch).toList();
+    if (faceUpCards.length == 2) {
+      if (faceUpCards[0].frontImage == faceUpCards[1].frontImage) {
+        faceUpCards[0].isMatch = true;
+        faceUpCards[1].isMatch = true;
+        score+=10;
+      }
+      else {
+        score-=2;
+        Future.delayed(const Duration(seconds: 1), () {
+          faceUpCards[0].isFaceUp = false;
+          faceUpCards[1].isFaceUp = false;
+          notifyListeners();
+        });
+      }
+      notifyListeners();
+    }
+    if (cards.every((card) => card.isMatch)) {
+      isGameOver = true;
+      showWin();
+    }
+  }
+
+  void showWin() {
+    print('You Win, Matched all cards in $timeElapsed seconds.');
   }
 }
