@@ -160,14 +160,14 @@ class GameState extends ChangeNotifier {
       'assets/Nan.png',
       'assets/Pei.png',
       'assets/Shaa.png',
-      'assets/Tom.png',
+      'assets/Ton.png',
       'assets/Sou1.png',
     ];
     cards = (images + images)
       .map((image) => CardModel(
         frontImage: image,
         backImage: 'asset/Back.png',
-      ))
+        ))
       .toList();
     cards.shuffle();
 
