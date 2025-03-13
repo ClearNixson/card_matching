@@ -92,7 +92,7 @@ class CardWidget extends StatelessWidget {
     final card = gameState.cards[index];
 
     return GestureDetector(
-      onTap: () => gameState.flipCard[index],
+      onTap: () => gameState.flipCard(index, context),
       child: AnimatedBuilder(
         animation: Listenable.merge([gameState]),
         builder: (context, child) {
@@ -125,7 +125,7 @@ class CardWidget extends StatelessWidget {
 class CardModel {
   final String frontImage;
   final String backImage;
-  bool isFaceUp
+  bool isFaceUp;
   bool isMatch;
 
   CardModel ({
@@ -154,12 +154,19 @@ class GameState extends ChangeNotifier {
     timer?.cancel();
 
     List<String> images = [
-      //add assets
+      'assets/Chun.png',
+      'assets/Haku.png',
+      'assets/Hatsu.png',
+      'assets/Nan.png',
+      'assets/Pei.png',
+      'assets/Shaa.png',
+      'assets/Tom.png',
+      'assets/Sou1.png',
     ];
     cards = (images + images)
       .map((image) => CardModel(
         frontImage: image,
-        backImage: 'asset/back.png',
+        backImage: 'asset/Back.png',
       ))
       .toList();
     cards.shuffle();
@@ -177,16 +184,16 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void flipCard(int index) {
+  void flipCard(int index, BuildContext context) {
     if (cards[index].isMatch || cards[index].isFaceUp) return;
 
     cards[index].isFaceUp = !cards[index].isFaceUp;
     notifyListeners();
 
-    checkMatch();
+    checkMatch(context);
   }
 
-  void checkMatch() {
+  void checkMatch(BuildContext context) {
     var faceUpCards = cards.where((card) => card.isFaceUp && !card.isMatch).toList();
     if (faceUpCards.length == 2) {
       if (faceUpCards[0].frontImage == faceUpCards[1].frontImage) {
@@ -206,11 +213,29 @@ class GameState extends ChangeNotifier {
     }
     if (cards.every((card) => card.isMatch)) {
       isGameOver = true;
-      showWin();
+      showWin(context);
     }
   }
 
-  void showWin() {
-    print('You Win, Matched all cards in $timeElapsed seconds.');
+  void showWin(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Win'),
+          content: Text('Matched all cards in $timeElapsed seconds.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                initializeCards();
+              },
+              child: const Text('Play Again'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
